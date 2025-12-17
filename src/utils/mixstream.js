@@ -68,7 +68,7 @@ class MixStream extends events {
 
     if (srcLocal && srcShare) {
       // 浏览器生成一个包含音轨的 mediaStream 对象
-      let mediaStream = await navigator.mediaDevices.getUserMedia({audio: true});
+      let mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // 生成一个 mediaStream 音频源
       const micSourceNode = this.audioContext.createMediaStreamSource(mediaStream);
       const destination = this.audioContext.createMediaStreamDestination()
@@ -108,7 +108,7 @@ class MixStream extends events {
       this.emit('local-video-stream-updated', this.localVideoStream)
     }
   }
-  localSubRemoveStream(){
+  localSubRemoveStream() {
     if (this.localSubStream.getVideoTracks().length !== 0) {
       var track = this.localSubStream.getVideoTracks()[0]
       track.stop()
@@ -116,7 +116,7 @@ class MixStream extends events {
       this.emit('local-video-substream-updated', this.localVideoStream)
     }
   }
-  localsubTrack(track){
+  localsubTrack(track) {
     this.localSubStream = new MediaStream()
     this.localSubStream.addTrack(track)
     this.emit('play-video-substream-updated', this.localSubStream)
@@ -183,7 +183,7 @@ class MixStream extends events {
   // 删除播放的视频流通道
   playVideoRemoveTrack(display) {
     //删除play的视频track，只有一个
-    if (this.playVideoStream.get(display)&&this.playVideoStream.get(display).getVideoTracks().length > 0) {
+    if (this.playVideoStream.get(display) && this.playVideoStream.get(display).getVideoTracks().length > 0) {
       var track = this.playVideoStream.get(display).getVideoTracks()[0]
       track.stop()
       this.playVideoStream.get(display).removeTrack(track)
@@ -191,9 +191,9 @@ class MixStream extends events {
     }
   }
 
-  playVideoRemoveTrackWithTrack(trackToRemove,display) {
+  playVideoRemoveTrackWithTrack(trackToRemove, display) {
     //删除play的视频track，只有一个
-    if (this.playVideoStream.get(display)&&this.playVideoStream.get(display).getVideoTracks().length > 0) {
+    if (this.playVideoStream.get(display) && this.playVideoStream.get(display).getVideoTracks().length > 0) {
       var track = this.playVideoStream.get(display).getVideoTracks()[0]
       if (track.id === trackToRemove.id) {
         track.stop()
@@ -211,7 +211,7 @@ class MixStream extends events {
     }
   }
   // 本地相关的音视频流添加
-  playAddTrack(track,display) {
+  playAddTrack(track, display) {
     if (track.kind === 'audio') {
       this.playAudioStream.addTrack(track)
       this.emit('play-audio-stream-updated', this.playAudioStream)
@@ -219,22 +219,25 @@ class MixStream extends events {
       if (this.playVideoStream.get(display)) {
         //视频直接替换
         this.playVideoRemoveTrack(display)
-        this.playVideoStream.get(display).addTrack(track)
-        this.emit('play-video-stream-updated', this.playVideoStream)
-      }else{
-        this.playVideoStream.set(display,new MediaStream())
-        this.playVideoStream.get(display).addTrack(track)
-        this.emit('play-video-stream-updated', this.playVideoStream)
       }
+
+      // playVideoRemoveTrack可能会触发外部逻辑导致map中的display被删掉（如死流检测）
+      // 所以这里要再次检查，如果不存在则重新创建
+      if (!this.playVideoStream.get(display)) {
+        this.playVideoStream.set(display, new MediaStream())
+      }
+
+      this.playVideoStream.get(display).addTrack(track)
+      this.emit('play-video-stream-updated', this.playVideoStream)
     }
   }
 
   //一般只有在音频调用此函数，视频直接调用playVideoRemoveTrackWithTrack
-  playRemoveTrack(track,display) {
+  playRemoveTrack(track, display) {
     if (track.kind === 'audio') {
       this.playAudioStream.removeTrack(track)
     } else if (track.kind === 'video') {
-      this.playVideoRemoveTrackWithTrack(track,display)
+      this.playVideoRemoveTrackWithTrack(track, display)
     }
   }
 }
