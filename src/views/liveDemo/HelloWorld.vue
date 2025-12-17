@@ -203,7 +203,7 @@
             </div>
             
             <!-- 下部：每页数量选择器 -->
-            <div class="pagination-bottom">
+            <!-- <div class="pagination-bottom">
               <el-select 
                 v-model="limit" 
                 @change="onPageSizeChange"
@@ -216,7 +216,7 @@
                 <el-option label="每页12个" :value="12"></el-option>
                 <el-option label="每页15个" :value="15"></el-option>
               </el-select>
-            </div>
+            </div> -->
       </div>
       
       <!-- 视频网格 -->
@@ -465,6 +465,116 @@
           </div>
         </div>
     </el-dialog>
+
+    <!-- 设备检测弹窗 -->
+    <el-dialog
+      title="直播设备检测"
+      :visible.sync="deviceCheckVisible"
+      width="640px"
+      :close-on-click-modal="false"
+      @close="stopPreview"
+      append-to-body
+      custom-class="device-check-dialog"
+    >
+      <div class="device-check-container">
+        <!-- 视频预览区域 -->
+        <div class="preview-area">
+          <div class="video-wrapper">
+            <video
+              ref="previewVideo"
+              autoplay
+              muted
+              playsinline
+              style="width: 100%; height: 100%; background: #000; object-fit: contain;"
+            ></video>
+            <div class="audio-level-bar">
+              <div 
+                class="audio-level-fill"
+                :style="{ width: audioLevel + '%' }"
+                :class="{ 'level-green': audioLevel > 0 }"
+              ></div>
+            </div>
+          </div>
+          <div v-if="previewError" class="preview-error">
+            <i class="el-icon-warning"></i> {{ previewError }}
+          </div>
+        </div>
+
+        <!-- 设备选择区域 -->
+        <div class="device-controls">
+          <el-form label-position="top" size="small">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="摄像头">
+                  <el-select 
+                    v-model="deviceInfo.videoInputDeviceId" 
+                    placeholder="请选择摄像头"
+                    @change="handleVideoDeviceChange"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="item in deviceInfo.videoInputDevices"
+                      :key="item.deviceId"
+                      :label="item.label || '摄像头 ' + (index + 1)"
+                      :value="item.deviceId"
+                    >
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="麦克风">
+                  <el-select 
+                    v-model="deviceInfo.audioInputDeviceId" 
+                    placeholder="请选择麦克风"
+                    @change="handleAudioDeviceChange"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="(item, index) in deviceInfo.audioInputDevices"
+                      :key="item.deviceId"
+                      :label="item.label || '麦克风 ' + (index + 1)"
+                      :value="item.deviceId"
+                    >
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="扬声器">
+                  <el-select 
+                    v-model="deviceInfo.audioOutputDeviceId" 
+                    placeholder="请选择扬声器"
+                    @change="changeAudioOutput"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="(item, index) in deviceInfo.audioOutputDevices"
+                      :key="item.deviceId"
+                      :label="item.label || '扬声器 ' + (index + 1)"
+                      :value="item.deviceId"
+                    >
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12" style="display: flex; align-items: flex-end;">
+                 <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">
+                   <i class="el-icon-info"></i> 请确保能看到画面且下方绿色音量条在跳动
+                 </div>
+              </el-col>
+            </el-row>
+          </el-form>
+        </div>
+      </div>
+      
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="deviceCheckVisible = false">取 消</el-button>
+        <el-button type="primary" @click="confirmPublish" :disabled="!!previewError">开始直播</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -519,7 +629,7 @@ export default {
       subStreams: [],
       implementFun: null,
       page: 0,
-      limit: 9, // 默认每页数量（推荐值）
+      limit: 6, // 默认每页数量（推荐值）
       recommendedLimit: 12, // 推荐的每页数量（性能最优）
       jumpToPageInput: 1, // 跳转页码输入
       videoPlayers: null,
@@ -564,6 +674,12 @@ export default {
         recoveryCooldown: 10000, // 恢复冷却时间10秒（防止频繁恢复）
         maxRecoveryAttempts: 3, // 最大恢复次数（避免无限循环）
       },
+      // 设备检测相关
+      deviceCheckVisible: false,
+      previewStream: null,
+      audioLevel: 0,
+      audioLevelTimer: null,
+      previewError: '',
     };
   },
   mounted() {
@@ -1577,24 +1693,6 @@ export default {
     // 切换主流区域大小
     toggleMainStreamSize() {
       this.isMainStreamCollapsed = !this.isMainStreamCollapsed;
-      
-      let message = '';
-      if (this.subStreams.length > 0) {
-        message = this.isMainStreamCollapsed 
-          ? '主流已缩小（1列），辅流已放大' 
-          : '主流已放大（3列），辅流已缩小';
-      } else {
-        message = this.isMainStreamCollapsed 
-          ? '主流已缩小为1列显示' 
-          : '主流已恢复3列显示';
-      }
-      
-      this.$message({
-        message: message,
-        type: 'success',
-        duration: 2000
-      });
-      
       // 保存偏好设置
       try {
         localStorage.setItem('isMainStreamCollapsed', this.isMainStreamCollapsed);
@@ -2205,9 +2303,130 @@ export default {
       await this.room.startCaptureSingle("video");
     },
     async StartPublish() {
-      // console.log(this.$refs.board.$refs.canvas.captureStream(),this.$refs.board.$refs.canvas.captureStream().getTracks(),'----------------------------lll');
-      // this.room.publishsdp(true, true,this.$refs.board.$refs.canvas.captureStream());
+      // 打开设备检测弹窗，而不是直接推流
+      this.deviceCheckVisible = true;
+      this.$nextTick(() => {
+        this.startPreview();
+      });
+    },
+
+    // 确认推流
+    confirmPublish() {
+      this.stopPreview(); // 停止预览流，释放设备给推流使用
+      this.deviceCheckVisible = false;
       this.room.publishsdp(true, true);
+    },
+
+    // 开启设备预览
+    async startPreview() {
+      this.previewError = '';
+      if (this.previewStream) {
+        this.stopPreview();
+      }
+
+      try {
+        // 使用 deviceInfo 的方法生成当前选择设备的 constraints
+        // 注意：这里我们需要强制获取视频和音频用于预览，即使 deviceInfo 可能还没完全初始化
+        const constraints = {
+          audio: this.deviceInfo.audioInputDeviceId ? { deviceId: { exact: this.deviceInfo.audioInputDeviceId } } : true,
+          video: this.deviceInfo.videoInputDeviceId ? { 
+            deviceId: { exact: this.deviceInfo.videoInputDeviceId },
+            width: { ideal: 640 },
+            height: { ideal: 360 }
+           } : true
+        };
+
+        console.log('正在请求预览流:', constraints);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        this.previewStream = stream;
+
+        // 设置视频预览
+        const videoEl = this.$refs.previewVideo;
+        if (videoEl) {
+          videoEl.srcObject = stream;
+        }
+
+        // 设置音频音频可视化
+        this.startAudioLevelMeter(stream);
+
+      } catch (err) {
+        console.error('获取预览流失败:', err);
+        this.previewError = '无法获取摄像头或麦克风，请检查设备连接和权限设置';
+        
+        // 尝试获取设备列表，看是否真的没有设备
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasVideo = devices.some(d => d.kind === 'videoinput');
+        const hasAudio = devices.some(d => d.kind === 'audioinput');
+        
+        if (!hasVideo) this.previewError = '未检测到摄像头';
+        if (!hasAudio && !hasVideo) this.previewError = '未检测到摄像头和麦克风';
+      }
+    },
+
+    // 停止设备预览
+    stopPreview() {
+      if (this.previewStream) {
+        this.previewStream.getTracks().forEach(track => track.stop());
+        this.previewStream = null;
+      }
+      if (this.audioLevelTimer) {
+        cancelAnimationFrame(this.audioLevelTimer);
+        this.audioLevelTimer = null;
+      }
+      this.audioLevel = 0;
+    },
+
+    // 音频可视化
+    startAudioLevelMeter(stream) {
+      if (this.audioLevelTimer) cancelAnimationFrame(this.audioLevelTimer);
+      
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const mediaStreamSource = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        mediaStreamSource.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const updateLevel = () => {
+          if (!this.deviceCheckVisible) return;
+          
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for(let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / bufferLength;
+          // 简单的映射到 0-100
+          this.audioLevel = Math.min(100, average * 2.5);
+          
+          this.audioLevelTimer = requestAnimationFrame(updateLevel);
+        };
+        
+        updateLevel();
+      } catch (e) {
+        console.warn('音频可视化启动失败', e);
+      }
+    },
+
+    // 切换摄像头预览
+    handleVideoDeviceChange(deviceId) {
+      console.log('切换摄像头:', deviceId);
+      // 调用 deviceInfo 的方法更新内部状态
+      this.changeVideoInput(deviceId); 
+      // 重启预览
+      this.startPreview();
+    },
+
+    // 切换麦克风预览
+    handleAudioDeviceChange(deviceId) {
+      console.log('切换麦克风:', deviceId);
+      // 调用 deviceInfo 的方法更新内部状态
+      this.changeAudioInput(deviceId);
+      // 重启预览
+      this.startPreview();
     },
      // 监听到新的音频
      async playAudioStreamUpdated(aStream) {
@@ -2226,6 +2445,23 @@ export default {
         audioSrc.play()
       }
     },
+    /**
+     * 根据房间下行视频流 vStream 拆分主流和辅流，并维护本地 subStreams 列表。
+     *
+     * 旧思路：
+     * - 通过 participants.display 是否包含 key 来区分主流 / 辅流；
+     * - 所有判定为辅流的 value 都直接加入 newSubStreams，
+     *   只有在 key + stream.id 变化时才认为需要更新；
+     * - 如果推辅流的人刷新浏览器重新进入，SDK 可能会短时间内同时保留“旧辅流”和“新辅流”，
+     *   旧辅流里的 track 已经 ended，但仍然会被认为是一个正常辅流，导致右侧残留一个黑屏小窗。
+     *
+     * 新思路（在旧逻辑基础上加一层"存活检测"）：
+     * - 对每个判定为辅流的 MediaStream，检查是否还有有效的音视频轨道、active 状态等；
+     * - 如果检测到是“死辅流”（无轨道 / active=false / videoTrack.readyState=ended），
+     *   直接跳过，不加入 newSubStreams；
+     * - 这样 oldSubStream 中对应的项会被视为“被移除”，交给 cleanupRemovedSubStreams 和
+     *   cleanupAllSubStreams 去清理 video.srcObject，避免刷新后一直残留黑屏辅流。
+     */
     changePlayVideos(vStream) {
       let arr = [];
       let newSubStreams = []; // 使用临时数组，避免直接清空
@@ -2235,27 +2471,53 @@ export default {
       }
       
       vStream.size && vStream.forEach((value, key) => {
-        let isSome = this.participants.some((e) => {
-          return e.display == key;
+        // 1. 根据 participants.display 是否包含 key 来区分主流 / 辅流
+        const isMainStream = this.participants.some((participant) => {
+          return participant.display === key;
         });
         
-        if (isSome) {
-          // 普通视频流
+        if (isMainStream) {
+          // 普通视频流（主流）
           arr.push({ key: key, stream: value });
         } else {
-          // 辅流处理
+          // 辅流处理逻辑
+          // ----------------------- 辅流“存活”检测开始 -----------------------
+          const videoTracks = typeof value.getVideoTracks === 'function' ? value.getVideoTracks() : [];
+          const audioTracks = typeof value.getAudioTracks === 'function' ? value.getAudioTracks() : [];
+          const firstVideoTrack = videoTracks[0];
+          
+          // 有任意一条音/视频轨道即认为“有内容”
+          const hasAnyTrack = videoTracks.length > 0 || audioTracks.length > 0;
+          // MediaStream.active 为 false 通常表示流已结束
+          const isStreamActiveFlag = typeof value.active === 'boolean' ? value.active : true;
+          // video track 处于 live 状态才算正常
+          const isVideoTrackLive = firstVideoTrack ? firstVideoTrack.readyState === 'live' : false;
+          
+          const isDeadSubStream = !hasAnyTrack || !isStreamActiveFlag || (firstVideoTrack && !isVideoTrackLive);
+          if (isDeadSubStream) {
+            // 这里直接把“死辅流”当作已经被移除，不再加入 newSubStreams
+            console.log('检测到已结束的辅流，忽略并等待 SDK 移除:', key, {
+              active: value.active,
+              videoReadyState: firstVideoTrack && firstVideoTrack.readyState,
+              hasVideo: videoTracks.length,
+              hasAudio: audioTracks.length,
+            });
+            return;
+          }
+          // ----------------------- 辅流“存活”检测结束 -----------------------
+          
           // 检查是否已经存在相同的辅流
-          const existingSubStream = this.subStreams.find(s => s.key === key);
+          const existingSubStream = this.subStreams.find((subStreamItem) => subStreamItem.key === key);
           
           if (existingSubStream && existingSubStream.stream.id === value.id) {
-            // 如果是同一个流（相同的key和stream id），保持不变，避免闪烁
+            // 如果是同一个流（相同的 key 和 stream id），保持不变，避免频繁重新绑定造成闪烁
             console.log('辅流未改变，保持现有流:', key, value.id);
             newSubStreams.push(existingSubStream);
           } else {
             // 只有在流真正改变时才更新
             console.log('辅流改变或新增:', key, value.id);
-            console.log('查看该辅流的视频通道是否正常', value.getVideoTracks());
-            console.log('查看该辅流的音频通道是否正常', value.getAudioTracks());
+            console.log('查看该辅流的视频通道是否正常', videoTracks);
+            console.log('查看该辅流的音频通道是否正常', audioTracks);
             
             newSubStreams.push({ key: key, stream: value });
           }
@@ -2264,19 +2526,25 @@ export default {
       
       // 只在辅流真正改变时才更新 subStreams
       // 比较新旧辅流的 key 和 stream id
-      const oldSubStreamKeys = this.subStreams.map(s => `${s.key}_${s.stream.id}`).sort().join(',');
-      const newSubStreamKeys = newSubStreams.map(s => `${s.key}_${s.stream.id}`).sort().join(',');
+      const oldSubStreamKeys = this.subStreams
+        .map((subStreamItem) => `${subStreamItem.key}_${subStreamItem.stream.id}`)
+        .sort()
+        .join(',');
+      const newSubStreamKeys = newSubStreams
+        .map((subStreamItem) => `${subStreamItem.key}_${subStreamItem.stream.id}`)
+        .sort()
+        .join(',');
       
       if (oldSubStreamKeys !== newSubStreamKeys) {
         console.log('辅流列表发生变化，更新 subStreams');
         
-        // 找出被移除的辅流，清理对应的video元素
+        // 找出被移除的辅流，清理对应的 video 元素
         const removedSubStreams = this.subStreams.filter(
-          oldSub => !newSubStreams.some(newSub => newSub.key === oldSub.key)
+          (oldSub) => !newSubStreams.some((newSub) => newSub.key === oldSub.key)
         );
         
         if (removedSubStreams.length > 0) {
-          console.log('检测到辅流被移除:', removedSubStreams.map(s => s.key));
+          console.log('检测到辅流被移除:', removedSubStreams.map((subStreamItem) => subStreamItem.key));
           this.cleanupRemovedSubStreams(removedSubStreams);
         }
         
@@ -2287,7 +2555,7 @@ export default {
           console.log('所有辅流已移除，执行完整清理');
           this.cleanupAllSubStreams();
         } else {
-          // 为新的辅流设置video元素
+          // 为新的辅流设置 video 元素
           this.$nextTick(() => {
             this.setupSubStreamVideos();
           });
@@ -2301,6 +2569,29 @@ export default {
     },
     //监听到右流推过来
     async playVideoStreamUpdated(vStream) {
+      // ---------------- 检测无效流并清除 ----------------
+      if (vStream && vStream.size > 0) {
+        const deadStreams = [];
+        vStream.forEach((stream, key) => {
+          const videoTracks = stream.getVideoTracks();
+          // 如果没有视频轨道，或者轨道状态是 ended，则认为是无效流
+          if (videoTracks.length === 0 || (videoTracks[0] && videoTracks[0].readyState === 'ended')) {
+            deadStreams.push(key);
+          }
+        });
+        
+        if (deadStreams.length > 0) {
+          console.log('检测到无效视频流，正在清理:', deadStreams);
+          deadStreams.forEach(key => {
+            // 调用 mixStream 的方法移除该流
+            // 注意：这会触发新的 play-video-stream-updated 事件
+            if (this.room && this.room.mixStream) {
+              this.room.mixStream.removeSubStream(key);
+            }
+          });
+        }
+      }
+      // --------------------------------------------------
       this.addDebugLog(`收到视频流更新，流数量: ${vStream.size}`, 'info');
       this.updateStreamInfo('总流数量', vStream.size);
       
@@ -4137,6 +4428,83 @@ export default {
       width: 100% !important;
       height: 50% !important;
     }
+  }
+}
+</style>
+
+<style lang="less">
+
+// 设备检测弹窗样式
+.device-check-dialog {
+  .el-dialog__body {
+    padding: 20px;
+  }
+}
+
+.device-check-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  .preview-area {
+    position: relative;
+    width: 100%;
+    height: 360px;
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .preview-error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #f56c6c;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .audio-level-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      overflow: hidden;
+
+      .audio-level-fill {
+        height: 100%;
+        width: 0%;
+        background-color: #f56c6c; // 默认红色（无声/小声）
+        transition: width 0.1s ease;
+        
+        &.level-green {
+          background-color: #67c23a; // 有声音变绿
+        }
+      }
+    }
+  }
+
+  .device-controls {
+    background: #f5f7fa;
+    padding: 20px;
+    border-radius: 4px;
   }
 }
 </style>

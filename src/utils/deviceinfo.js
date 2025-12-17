@@ -52,8 +52,23 @@ class DeviceInfo extends events {
       audio: false,
       video: false
     }
-    constraints.video = this.videoInputDevice?Object.assign(this.videoInputDevice, this.videoOption):this.videoOption
-    constraints.audio = this.audioInputDevice?Object.assign(this.audioInputDevice, this.audioOption):this.audioOption
+
+    if (this.videoInputDevice) {
+      constraints.video = Object.assign({}, this.videoOption, {
+        deviceId: { exact: this.videoInputDevice.deviceId }
+      });
+    } else {
+      constraints.video = this.videoOption;
+    }
+
+    if (this.audioInputDevice) {
+      constraints.audio = Object.assign({}, this.audioOption, {
+        deviceId: { exact: this.audioInputDevice.deviceId }
+      });
+    } else {
+      constraints.audio = this.audioOption;
+    }
+
     return constraints
   }
   //只开始采集音频或者视频，不能同时采集两者，一般是用在正在推流的时候, 交互性需要
@@ -77,8 +92,8 @@ class DeviceInfo extends events {
     if (kind === 'video') {
       constraints = this.getPushConstraints()
       constraints.video.width = '1280'
-      constraints.video.height = '720'
-      console.log(constraints,'constraints')
+      constraints.video.height = '720'
+      console.log(constraints, 'constraints')
       if (!constraints.video) {
         console.log(
           "you can't get video while audio device not available!!!!!!!!!!!!!!!!!!!!!!"
@@ -121,7 +136,7 @@ class DeviceInfo extends events {
     localStorage.setItem('videoInputDeviceId', id)
     this.videoInputDevice = device
     if (this.videoInputDeviceGroupId !== groupId) {
-    // console.log(device, groupId, id,'刷新摄像头');
+      // console.log(device, groupId, id,'刷新摄像头');
       this.videoInputDeviceGroupId = groupId
       this.emit('video-input-updated') //reset stream
     }
@@ -221,13 +236,19 @@ class DeviceInfo extends events {
     constraints.audio = isAudio && !!this.audioInputDevice
     constraints.video = isVideo && !!this.videoInputDevice
 
-    constraints.audio =
-      constraints.audio &&
-      Object.assign(this.audioInputDevice, this.audioOption)
-    constraints.video =
-      constraints.video &&
-      Object.assign(this.videoInputDevice, this.videoOption)
-    console.log(constraints,'推流参数')
+    if (constraints.audio) {
+      constraints.audio = Object.assign({}, this.audioOption, {
+        deviceId: { exact: this.audioInputDevice.deviceId }
+      });
+    }
+
+    if (constraints.video) {
+      constraints.video = Object.assign({}, this.videoOption, {
+        deviceId: { exact: this.videoInputDevice.deviceId }
+      });
+    }
+
+    console.log(constraints, '推流参数')
 
     return constraints
   }
@@ -240,9 +261,11 @@ class DeviceInfo extends events {
     }
 
     constraints.audio = !!this.audioInputDevice
-    constraints.audio =
-      constraints.audio &&
-      Object.assign(this.audioInputDevice, this.audioOption)
+    if (constraints.audio) {
+      constraints.audio = Object.assign({}, this.audioOption, {
+        deviceId: { exact: this.audioInputDevice.deviceId }
+      });
+    }
     return constraints
   }
   // 只获取视频流的constraints
@@ -251,103 +274,107 @@ class DeviceInfo extends events {
       audio: false,
       video: false
     }
-    // console.log(Object.assign(this.videoInputDevice, this.videoOption),'摄像头设备输入',typeof(this.videoInputDevice));
-    constraints.video = this.videoInputDevice?Object.assign(this.videoInputDevice, this.videoOption):this.videoOption
-    // console.log(constraints.video,'这是啥', this.videoInputDevice);
-    // constraints.video && Object.assign(constraints.video, this.videoOption)
-    // console.log(constraints,'DJGAFIAGFIAGFIGFIAGFIAGFIAFIAGF');
+
+    if (this.videoInputDevice) {
+      constraints.video = Object.assign({}, this.videoOption, {
+        deviceId: { exact: this.videoInputDevice.deviceId }
+      });
+    } else {
+      constraints.video = this.videoOption;
+    }
+
     return constraints
   }
 
   // 获取设备列表，更新设备列表信息
   async deviceChange() {
-    try{
+    try {
       var devices = await navigator.mediaDevices.enumerateDevices()
-      console.log(devices,'设备列表');
+      console.log(devices, '设备列表');
       var needAskAudio = false
-    var needAskVideo = false
-    var hasVideoDevice = false
-    var hasAudioDevice = false
-    if (devices.some(e=>{
-      return e.kind === 'videoinput'
-    })) {
-      hasVideoDevice = true
-    }
-    if (devices.some(e=>{
-      return e.kind === 'audioinput'
-    })) {
-      hasAudioDevice = true
-    }
-    if (
-      devices.findIndex(d => {
-        return d.label === '' && d.kind === 'audioinput'
-      }) !== -1
-    ) {
-      needAskAudio = true
-    }
-    if (
-      devices.findIndex(d => {
-        return d.label === '' && d.kind === 'videoinput'
-      }) !== -1
-    ) {
-      needAskVideo = true
-    }
-    // console.log(needAskAudio, needAskVideo, 'aada111jdoajdoa');
-    if (needAskAudio || needAskVideo||!hasAudioDevice||!hasVideoDevice) {
-      try {
-        var stream = await navigator.mediaDevices.getUserMedia({
-          audio: needAskAudio,
-          video: needAskVideo
-        })
-        stream.getTracks().forEach(track => {
-          track.stop()
-        })
-      } catch (err) {
-        console.log(err,'没有音视频设备权限无法推流');
-        // confirm('您的摄像头或者麦克风权限被禁止，请开启权限')
+      var needAskVideo = false
+      var hasVideoDevice = false
+      var hasAudioDevice = false
+      if (devices.some(e => {
+        return e.kind === 'videoinput'
+      })) {
+        hasVideoDevice = true
       }
-
-
-
-      //again
-      // // noVideoPermission为true就是没摄像头设备或者权限，拉流时设置不能为true
-      // let noVideoPermission = devices.findIndex(d => {
-      //   return d.label === '' && d.kind === 'videoinput'
-      // }) !== -1
-      // // noAudioPermission为true就是没麦克风设备或者权限，拉流时设置不能为true
-      // let noAudioPermission = devices.findIndex(d => {
-      //   return d.label === '' && d.kind === 'audioinput'
-      // }) !== -1
-      // try {
-      //   var stream = await navigator.mediaDevices.getUserMedia({
-      //     audio: needAskAudio,
-      //     video: needAskVideo
-      //   })
-      // } catch (err) {
-      //   var stream = await navigator.mediaDevices.getUserMedia({
-      //     audio: !noAudioPermission,
-      //     video: !noVideoPermission
-      //   })
-      // }
-    }
-    devices = await navigator.mediaDevices.enumerateDevices()
-    // console.log(devices, this)
-    this.clear()
-    devices.forEach(device => {
-      if (device.kind === 'audioinput') {
-        this.audioInputDevices.push(device)
-      } else if (device.kind === 'videoinput') {
-        this.videoInputDevices.push(device)
-      } else if (device.kind === 'audiooutput') {
-        this.audioOutputDevices.push(device)
+      if (devices.some(e => {
+        return e.kind === 'audioinput'
+      })) {
+        hasAudioDevice = true
       }
-    })
+      if (
+        devices.findIndex(d => {
+          return d.label === '' && d.kind === 'audioinput'
+        }) !== -1
+      ) {
+        needAskAudio = true
+      }
+      if (
+        devices.findIndex(d => {
+          return d.label === '' && d.kind === 'videoinput'
+        }) !== -1
+      ) {
+        needAskVideo = true
+      }
+      // console.log(needAskAudio, needAskVideo, 'aada111jdoajdoa');
+      if (needAskAudio || needAskVideo || !hasAudioDevice || !hasVideoDevice) {
+        try {
+          var stream = await navigator.mediaDevices.getUserMedia({
+            audio: needAskAudio,
+            video: needAskVideo
+          })
+          stream.getTracks().forEach(track => {
+            track.stop()
+          })
+        } catch (err) {
+          console.log(err, '没有音视频设备权限无法推流');
+          // confirm('您的摄像头或者麦克风权限被禁止，请开启权限')
+        }
 
-    this.refreshDevices()
-    }catch(err){
+
+
+        //again
+        // // noVideoPermission为true就是没摄像头设备或者权限，拉流时设置不能为true
+        // let noVideoPermission = devices.findIndex(d => {
+        //   return d.label === '' && d.kind === 'videoinput'
+        // }) !== -1
+        // // noAudioPermission为true就是没麦克风设备或者权限，拉流时设置不能为true
+        // let noAudioPermission = devices.findIndex(d => {
+        //   return d.label === '' && d.kind === 'audioinput'
+        // }) !== -1
+        // try {
+        //   var stream = await navigator.mediaDevices.getUserMedia({
+        //     audio: needAskAudio,
+        //     video: needAskVideo
+        //   })
+        // } catch (err) {
+        //   var stream = await navigator.mediaDevices.getUserMedia({
+        //     audio: !noAudioPermission,
+        //     video: !noVideoPermission
+        //   })
+        // }
+      }
+      devices = await navigator.mediaDevices.enumerateDevices()
+      // console.log(devices, this)
+      this.clear()
+      devices.forEach(device => {
+        if (device.kind === 'audioinput') {
+          this.audioInputDevices.push(device)
+        } else if (device.kind === 'videoinput') {
+          this.videoInputDevices.push(device)
+        } else if (device.kind === 'audiooutput') {
+          this.audioOutputDevices.push(device)
+        }
+      })
+
+      this.refreshDevices()
+    } catch (err) {
       console.log(err);
     }
-    
+
   }
 
   // 前端调用，设置麦克风信息
@@ -427,7 +454,7 @@ class DeviceInfo extends events {
       )
       this.started = true
     } catch (error) {
-      console.log(error,'无权限')
+      console.log(error, '无权限')
     }
   }
 
