@@ -730,6 +730,9 @@ export default {
     this.room.addListener("device-change", this.deviceChange);
     this.room.addListener("errormsg", this.getErrorMsg);
     this.room.addListener("sendMsg", this.getMsgs);
+    // 监听远端用户状态变更（如关闭摄像头），用于二次确认清理视频流
+    this.room.addListener("local-state-changed", this.handleLocalStateChange);
+
     this.deviceInfo.addListener(
       "audio-output-updated",
       this.deviceOutputChange
@@ -1985,6 +1988,19 @@ export default {
         this.updateAllStats();
       });
     },
+    // 处理远端用户状态变更（如视频开关）
+    handleLocalStateChange(peer) {
+      if (peer && peer.videomuted) {
+        console.log(`检测到用户关闭视频: ${peer.username} (${peer.display})，正在清理遗留流`);
+        // 使用 mixStream 移除流，确保 UI 更新
+        if (this.room && this.room.mixStream) {
+          // 调用 removeSubStream 从 playVideoStream Map 中移除该流
+          // 这会触发 play-video-stream-updated 事件，从而更新界面
+          this.room.mixStream.removeSubStream(peer.display);
+        }
+      }
+    },
+
     getWsurl() {
       let that = this;
       axios

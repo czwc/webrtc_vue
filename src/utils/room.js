@@ -16,10 +16,10 @@ class Room extends events {
       msgs: new Map(),
     }
     this.users = '';
-    this.pcAudioPacketsLoss=0.00;
-    this.pcVideoPacketsLoss=0.00;
-    this.subAudioPacketsLoss=0.00;
-    this.subVideoPacketsLoss=0.00;
+    this.pcAudioPacketsLoss = 0.00;
+    this.pcVideoPacketsLoss = 0.00;
+    this.subAudioPacketsLoss = 0.00;
+    this.subVideoPacketsLoss = 0.00;
     this.pullAudioPackLost = 0.00;
     this.pullVideoPackLost = 0.00;
     this.bandwidthTimer = null;
@@ -40,7 +40,7 @@ class Room extends events {
     this.connectIndex = 0
     // 离开状态
     this.leaveStatus = null
-    this.buffer=[];    //存储录制数据
+    this.buffer = [];    //存储录制数据
     this.mediaRecorder = null;    //对象
     this.auxiliaryStream = new MediaStream() //被储存的辅流
     this.mixStreams = new MediaStream() //融合完的流
@@ -57,8 +57,8 @@ class Room extends events {
     this.reconnectTimer = null
     this.setTime = true //如果settime为true，
     this.record = null;
-    this.groupUsers= [];
-    this.iTime = null; 
+    this.groupUsers = [];
+    this.iTime = null;
   }
 
   get getAction() {
@@ -202,8 +202,8 @@ class Room extends events {
   resetMyInfo() {
     this.myInfo = {
       display: '',
-      subDisplay:null,
-      recordDisplay:null,
+      subDisplay: null,
+      recordDisplay: null,
       tokenId: '',
       role: 'user',
       room: '',
@@ -234,7 +234,7 @@ class Room extends events {
       suboffer: null,
       recordoffer: null,
       recordpc: null,
-      subpc:null,
+      subpc: null,
       pc: null,
       stream: null, // 可以显示本地的
       publish_state: 'unpublished',
@@ -243,7 +243,7 @@ class Room extends events {
       isAllowPushVideo: false, // 信令控制，是否可以推视频流，现在只有主持人可以推
       pcStats: null,
       isSharing: false,
-      subDisplay:null
+      subDisplay: null
     }
   }
 
@@ -274,7 +274,7 @@ class Room extends events {
   }
 
   //计算带宽，join之后开始调用，leave之后将定时器清除停止调用
-  async bandwidthComputing(){
+  async bandwidthComputing() {
     this.bandwidth = new Bandwidth()
     this.bandwidthTimer = setInterval(async () => {
       let bandwidth = 0;
@@ -282,41 +282,41 @@ class Room extends events {
       var pullVideoPackLost = 0;
       var pullAudioPackLost = 0;
       var users = ''
-      let pc = this.publish?this.publish.pc:null;
-      let subpc = this.publish?this.publish.subpc:null;
-      let recordpc = this.publish?this.publish.recordpc:null;
-      if(pc){
-        bandwidth+=await this.bandwidth.bandwidthComputingByPush(pc)
+      let pc = this.publish ? this.publish.pc : null;
+      let subpc = this.publish ? this.publish.subpc : null;
+      let recordpc = this.publish ? this.publish.recordpc : null;
+      if (pc) {
+        bandwidth += await this.bandwidth.bandwidthComputingByPush(pc)
         this.pcAudioPacketsLoss = await this.bandwidth.getPcLossPackRatioByAudio(pc)
         this.pcVideoPacketsLoss = await this.bandwidth.getPcLossPackRatioByVideo(pc)
       }
-      if(subpc){
-        bandwidth+=await this.bandwidth.bandwidthComputingBySubPush(subpc)
+      if (subpc) {
+        bandwidth += await this.bandwidth.bandwidthComputingBySubPush(subpc)
         this.subAudioPacketsLoss = await this.bandwidth.getSubPcLossPackRatioByAudio(subpc)
         this.subVideoPacketsLoss = await this.bandwidth.getSubPcLossPackRatioByVideo(subpc)
       }
-      if(recordpc){
+      if (recordpc) {
         await this.bandwidth.bandwidthComputingByRecord(recordpc)
       }
       //上行计算主流加辅流
       this.pushBitrate = bandwidth;
       if (this.players.size) {
         //下行遍历players将所有下行相加
-      this.players.forEach(async (player)=>{
-          let bands = await this.bandwidth.bandwidthComputingByPull(player.pc,player.display)
+        this.players.forEach(async (player) => {
+          let bands = await this.bandwidth.bandwidthComputingByPull(player.pc, player.display)
           let user = await this.bandwidth.getSpeakUser(player.pc, player.username)
-          let pullVideoPackLoss = await this.bandwidth.getPullLossPackRatioByVideo(player.pc,player.display)
-          let pullAudioPackLoss = await this.bandwidth.getPullLossPackRatioByAudio(player.pc,player.display)
-          user&&(users+=user)
-          pullbandwidth+=bands
-          pullAudioPackLoss&&(pullAudioPackLost+=Number(pullAudioPackLoss))
-          pullVideoPackLoss&&(pullVideoPackLost+=Number(pullVideoPackLoss))
+          let pullVideoPackLoss = await this.bandwidth.getPullLossPackRatioByVideo(player.pc, player.display)
+          let pullAudioPackLoss = await this.bandwidth.getPullLossPackRatioByAudio(player.pc, player.display)
+          user && (users += user)
+          pullbandwidth += bands
+          pullAudioPackLoss && (pullAudioPackLost += Number(pullAudioPackLoss))
+          pullVideoPackLoss && (pullVideoPackLost += Number(pullVideoPackLoss))
         })
         setTimeout(() => {
           this.pullBitrate = pullbandwidth;
           this.users = users
-          this.pullAudioPackLost = (pullAudioPackLost/this.players.size).toFixed(2)
-          this.pullVideoPackLost = (pullVideoPackLost/this.players.size).toFixed(2)
+          this.pullAudioPackLost = (pullAudioPackLost / this.players.size).toFixed(2)
+          this.pullVideoPackLost = (pullVideoPackLost / this.players.size).toFixed(2)
           // console.log(pullAudioPackLost/this.players.size, pullVideoPackLost/this.players.size,'---');
         }, 50);
       }
@@ -355,22 +355,22 @@ class Room extends events {
         var stream = await navigator.mediaDevices.getUserMedia(constraints)
         this.mixStream.localAddTrack(stream.getVideoTracks()[0], false)
 
-        this.mixStream.playAddTrack(stream.getVideoTracks()[0],this.myInfo.display)
+        this.mixStream.playAddTrack(stream.getVideoTracks()[0], this.myInfo.display)
       }
     }
   }
-  mixRecordAudioStream(pcTrack,subTrack){
+  mixRecordAudioStream(pcTrack, subTrack) {
     let pcStream = new MediaStream()
     let subStream = new MediaStream()
-    pcTrack&&pcStream.addTrack(pcTrack)
-    subTrack&&subStream.addTrack(subTrack)
+    pcTrack && pcStream.addTrack(pcTrack)
+    subTrack && subStream.addTrack(subTrack)
     let audioContext = new AudioContext();//创建音频上下文
     let mixedOutput = audioContext.createMediaStreamDestination();//创建一个输出媒体流节点
     if (pcTrack) {
       let localMicrophoneStreamNode = audioContext.createMediaStreamSource(pcStream);//创建节点
       localMicrophoneStreamNode.connect(mixedOutput);//把麦克风节点和系统音节点添加到输出媒体流
     }
-    if(subTrack){
+    if (subTrack) {
       let audioStreamNode = audioContext.createMediaStreamSource(subStream);//创建系统音频节点
       audioStreamNode.connect(mixedOutput);//把麦克风节点和系统音节点添加到输出媒体流
     }
@@ -382,58 +382,58 @@ class Room extends events {
     // })
     return mixedOutput.stream.getTracks()[0]
   }
-  async publishRecordSdp(){
-    console.log(this.myInfo.role,'this.room.myInfo.role');
-    
-    if (this.myInfo.role=='user') {
+  async publishRecordSdp() {
+    console.log(this.myInfo.role, 'this.room.myInfo.role');
+
+    if (this.myInfo.role == 'user') {
       return false;
     }
     clearTimeout(this.iTime);
-    this.iTime = setTimeout(async () =>{
+    this.iTime = setTimeout(async () => {
       //是主持人再来调用这个接口,根据个人需求判断
       // if(this.myInfo.role!='admin'){
       //   return false;
       // }
-      let pcSenders =await this.publish.pc?this.publish.pc.getSenders():null;
-      let subpcSenders =await this.publish.subpc?this.publish.subpc.getSenders():null;
-      let hasPcVideo = !!pcSenders&&pcSenders[1]?.track.readyState==="live";
-      let hasSubpcVideo = !!subpcSenders&&subpcSenders[1].track?.readyState==="live";
-      let hasPcAudio = !!pcSenders&&pcSenders[0]?.track.readyState==="live";
-      let hasSubpcAudio = !!subpcSenders&&subpcSenders[0].track?.readyState==="live";
-      let videoDisplay =''
+      let pcSenders = await this.publish.pc ? this.publish.pc.getSenders() : null;
+      let subpcSenders = await this.publish.subpc ? this.publish.subpc.getSenders() : null;
+      let hasPcVideo = !!pcSenders && pcSenders[1]?.track.readyState === "live";
+      let hasSubpcVideo = !!subpcSenders && subpcSenders[1].track?.readyState === "live";
+      let hasPcAudio = !!pcSenders && pcSenders[0]?.track.readyState === "live";
+      let hasSubpcAudio = !!subpcSenders && subpcSenders[0].track?.readyState === "live";
+      let videoDisplay = ''
       let mainDisplay = ''
       let subDisplay = ''
-      if (pcSenders&&subpcSenders) {
+      if (pcSenders && subpcSenders) {
         console.log('主辅流都存在时');
         mainDisplay = this.myInfo.subDisplay
         //当没主音频有辅音频时推辅音频，否则推主音频
-        if (!hasPcAudio&&hasSubpcAudio) {
+        if (!hasPcAudio && hasSubpcAudio) {
           subDisplay = this.myInfo.subDisplay
-        }else {
+        } else {
           subDisplay = this.myInfo.display
         }
-      }else if (!pcSenders&&subpcSenders) {
+      } else if (!pcSenders && subpcSenders) {
         console.log('当只存在共享屏幕通道时');
         mainDisplay = this.myInfo.subDisplay
-      }else if (pcSenders&&!subpcSenders) {
+      } else if (pcSenders && !subpcSenders) {
         console.log('当只存在摄像头通道时');
         mainDisplay = this.myInfo.display
-      }else if (!pcSenders&&!subpcSenders) {
+      } else if (!pcSenders && !subpcSenders) {
         console.log('当两个通道都不存在时，关闭录制');
-        mainDisplay=''
-        subDisplay=''
+        mainDisplay = ''
+        subDisplay = ''
         return false;
       }
       //当两路视频流都停止时videoRecord = false
-      if(!hasPcVideo&&!hasSubpcVideo){
-        mainDisplay=''
+      if (!hasPcVideo && !hasSubpcVideo) {
+        mainDisplay = ''
       }
-      this.startRecording(mainDisplay,subDisplay);
-    },150)
+      this.startRecording(mainDisplay, subDisplay);
+    }, 150)
 
- }
+  }
   // 开始录像
-  startRecording(mainDisplay,subDisplay) {
+  startRecording(mainDisplay, subDisplay) {
     return this.send({
       action: 'startRecord',
       room: this.myInfo.room,
@@ -443,11 +443,11 @@ class Room extends events {
   }
   // 查找用户
   searchUsers(e) {
-    this.groupUsers= [];
+    this.groupUsers = [];
     return this.send({
       action: 'getGroupParticipants',
       room: this.myInfo.room,
-      groupId:e
+      groupId: e
     })
   }
   // 本地音频更新事件，更新到发送远端的peer_connection, mixStream回调
@@ -642,7 +642,7 @@ class Room extends events {
     this.bandwidthTimer = null;
     if (this.publish.pc) {
       this.publish.pc.getSenders().forEach(sender => {
-          sender.track&&sender.track.stop()
+        sender.track && sender.track.stop()
       })
       this.stopPublish()
       this.publish.publish_state = 'unpublishing'
@@ -652,8 +652,8 @@ class Room extends events {
     if (this.publish.subpc) {
       //将通道关掉共享的标签才会自己不见
       this.publish.subpc.getSenders().forEach(sender => {
-        sender.track&&sender.track.stop()
-    })
+        sender.track && sender.track.stop()
+      })
       this.publish.subpc && this.publish.subpc.close()
       this.publish.subpc = null
       this.myInfo.subDisplay = ''
@@ -704,8 +704,8 @@ class Room extends events {
   onresponse(msg) {
     const that = this
     if (msg.code !== 200200 && msg.code) {
-      console.log(msg,'===这是code !== 200200的msg===');
-      
+      console.log(msg, '===这是code !== 200200的msg===');
+
       this.emit('errormsg', msg)
       if (msg.code === 200205) {
         this.disconnect()
@@ -730,9 +730,9 @@ class Room extends events {
       this.emit('check-participants', msg)
       this.setAllowPushVideo(true)
       this.playallsdp() // 加入房间，默认拉取所有流
-    }else if(msg.action === 'getGroupParticipants'){
+    } else if (msg.action === 'getGroupParticipants') {
       this.groupUsers = msg.peer
-    }else if(msg.action === 'publishRecordSdp'){
+    } else if (msg.action === 'publishRecordSdp') {
       this.publish.remote_recordsdp = msg.sdp
     } else if (msg.action === 'publishsdp') {
       // 推流SDP协商返回
@@ -744,7 +744,7 @@ class Room extends events {
         this.publish.remote_subsdp = msg.sdp
         this.publish.publish_state = 'publishsdped'
         this.startPublish('sub')
-      }else{
+      } else {
         this.publish.remote_sdp = msg.sdp
         this.publish.publish_state = 'publishsdped'
         this.startPublish('main')
@@ -753,17 +753,17 @@ class Room extends events {
       // 推流通知返回,真正完成推流
       this.publish.publish_state = 'published'
       this.roominfo.self = msg.self
-      this.publishRecordSdp() 
+      this.publishRecordSdp()
       this.roomUpdateParticipants(msg.self, 'msg.action=publish')
-      
+
       this.playallsdp()
       // 推流拉流，更新底部按钮
       this.emit('check-participants')
-    }else if (msg.action === 'publishsub') {
+    } else if (msg.action === 'publishsub') {
       // 推流通知返回,真正完成推流
       this.publish.publish_state = 'published'
       this.roominfo.self.subDisplay = msg.subDisplay
-        this.publishRecordSdp()
+      this.publishRecordSdp()
       this.roomUpdateParticipants(this.roominfo.self, 'msg.action=publish')
       // 推流拉流，更新底部按钮
       this.emit('check-participants')
@@ -772,7 +772,7 @@ class Room extends events {
       this.mixStream.removeSubStream(msg.display)
       this.handleUnpublish(msg.self)
       this.roomUpdateParticipants(msg.self)
-        this.publishRecordSdp()
+      this.publishRecordSdp()
     }
     else if (msg.action === 'unpublishsub') {
       //主持人关掉了辅流，将辅流从map中去除
@@ -780,9 +780,9 @@ class Room extends events {
       if (findIndex) {
         this.roominfo.participants[findIndex].subDisplay = ''
       }
-        setTimeout(() => {
-          this.publishRecordSdp()
-        }, 1000);
+      setTimeout(() => {
+        this.publishRecordSdp()
+      }, 1000);
       // if (this.publish.subpc) {
       //   this.publish.subpc.getSenders()&&this.publish.subpc.getSenders()[0].track.stop()
       //   this.publish.subpc.getSenders()&&this.publish.subpc.getSenders()[1].track.stop()
@@ -801,9 +801,9 @@ class Room extends events {
       // 拉流sdp协商后，开始播放
       const player = this.players.get(msg.action_display)
       // console.log('player==', player)
-      if (player&&msg.sdp) {
+      if (player && msg.sdp) {
         player.remote_sdp = msg.sdp
-          this.startPlay(player)
+        this.startPlay(player)
       }
       // 主持端的display存储到拉取端
       this.emit('save-peer-display', msg.action_display)
@@ -833,6 +833,12 @@ class Room extends events {
     } else if (msg.action === 'localstatenotify') {
       this.roomUpdateParticipants(msg.peer, 'action = localstatenotify')
       this.updateSelf(msg.peer)
+      // 如果视频被关闭，移除对应的流，防止黑屏/卡顿残留
+      if (msg.peer.videomuted) {
+        this.mixStream.removeSubStream(msg.peer.display)
+      }
+      // 通知上层(HelloWorld.vue)进行状态检查和UI刷新
+      this.emit('local-state-changed', msg.peer)
     } else if (msg.action === 'unmute') {
       that.emit('unmute-update')
     }
@@ -847,25 +853,25 @@ class Room extends events {
       // 对端状态 self+peer, 更新Participants
       this.roomUpdateParticipants(msg.peer, 'publish')
       // this.emit('update-user-peer', msg.peer)
-       // 后续看下，如果性能原因，优化接口，下发的时候不带全量，带增量
+      // 后续看下，如果性能原因，优化接口，下发的时候不带全量，带增量
       this.emit('check-participants')
       setTimeout(() => {
         this.playallsdp()
       }, 100);
-    }else if (msg.event === 'publishsub') {
+    } else if (msg.event === 'publishsub') {
       // 对端状态 self+peer, 更新Participants
       this.roomUpdateParticipants(msg.peer, 'publishsub')
       // this.emit('update-user-peer', msg.peer)
-      setTimeout(e=>{
+      setTimeout(e => {
         this.playallsdp()
         this.emit('check-participants')
-      },500)
+      }, 500)
       setTimeout(() => {
         console.log('有人推辅流');
-        if(this.players.get(msg.peer.subDisplay)&&this.players.get(msg.peer.subDisplay).pc.getReceivers()[1].track&&this.publish.recordpc){
+        if (this.players.get(msg.peer.subDisplay) && this.players.get(msg.peer.subDisplay).pc.getReceivers()[1].track && this.publish.recordpc) {
           let recordSenders = this.publish.recordpc.getSenders();
-          console.log(recordSenders[1].track,recordSenders[1],this.players.get(msg.peer.subDisplay).pc.getReceivers()[1].track);
-          recordSenders[1].track&&recordSenders[1].replaceTrack(this.players.get(msg.peer.subDisplay).pc.getReceivers()[1].track)
+          console.log(recordSenders[1].track, recordSenders[1], this.players.get(msg.peer.subDisplay).pc.getReceivers()[1].track);
+          recordSenders[1].track && recordSenders[1].replaceTrack(this.players.get(msg.peer.subDisplay).pc.getReceivers()[1].track)
         }
       }, 2000);
     } else if (msg.event === 'unpublish') {
@@ -876,9 +882,9 @@ class Room extends events {
       this.roomRemoveParticipants(msg.peer, 'unpublish')
       this.playallsdp() // 后续看下，如果性能原因，优化接口，下发的时候不带全量，带增量
       this.emit('peer-unpublish', msg.peer.username, msg.peer.display)
-    }else if (msg.event === 'unpublishsub') {
+    } else if (msg.event === 'unpublishsub') {
       // 对端状态 self+peer, 更新Participants
-      if(msg.peer.display !=this.roominfo.self.display){
+      if (msg.peer.display != this.roominfo.self.display) {
         this.mixStream.removeSubStream(msg.subDisplay)
         this.emit('peer-unpublish', msg.peer.username, msg.peer.display)
       }
@@ -889,7 +895,7 @@ class Room extends events {
       this.emit('peer-joined', msg)
     } else if (msg.event === 'leave') {
       // 对端状态 self+peer, 更新Participants
-       //主持人关掉了辅流，将辅流从map中去除
+      //主持人关掉了辅流，将辅流从map中去除
       this.mixStream.removeSubStream(msg.peer.display)
       this.roomRemoveParticipants(msg.peer)
       this.emit('peer-leave', msg, msg.peer.display)
@@ -912,19 +918,19 @@ class Room extends events {
       this.roomUpdateParticipants(msg.peer, 'event = localstatenotify')
       this.playallsdp()
       this.emit('peer-local-state-updated', msg.peer)
-    }  else if (msg.event === 'stopPublish') {
+    } else if (msg.event === 'stopPublish') {
       this.stopPublish()
       this.publish.publish_state = 'unpublishing'
       // this.publish.isAllowPushVideo = false
       this.roominfo.self.videomuted = true
       this.unPublishNotify()
       // this.roominfo.nextPresenterDisplay = msg.action_display
-    }else if (msg.event === 'startVideo'){
+    } else if (msg.event === 'startVideo') {
       this.publish.isAllowPushVideo = true
       this.publish.isLocalMuted = false
       this.publish.isLocalVideoMuted = false
       this.publishsdp(true, true)
-    }else if (msg.event === 'stopVideo'){
+    } else if (msg.event === 'stopVideo') {
       console.log('关闭视频');
       this.stopPublish()
       this.publish.publish_state = 'unpublishing'
@@ -951,7 +957,7 @@ class Room extends events {
           // 其他人被设为主持人，如果已经在推流，则直接播放
           if (p.videoTrack) {
 
-            this.mixStream.playAddTrack(p.videoTrack,msg.peer.display)
+            this.mixStream.playAddTrack(p.videoTrack, msg.peer.display)
           }
         }
       }
@@ -1018,7 +1024,7 @@ class Room extends events {
     // console.log(peer,'--------------------------');
     if (index >= 0) {
       this.roominfo.participants[index] = peer
-    }else{
+    } else {
       this.roominfo.participants.push(peer)
     }
   }
@@ -1031,10 +1037,10 @@ class Room extends events {
   }
 
   async startPublish(type) {
-    await this.publish[type==='main'?'pc':'subpc'].setRemoteDescription(
+    await this.publish[type === 'main' ? 'pc' : 'subpc'].setRemoteDescription(
       new RTCSessionDescription({
         type: 'answer',
-        sdp: type==='main'?this.publish.remote_sdp:this.publish.remote_subsdp,
+        sdp: type === 'main' ? this.publish.remote_sdp : this.publish.remote_subsdp,
       })
     )
 
@@ -1046,8 +1052,8 @@ class Room extends events {
       }
     }
     this.publish.publish_state = 'publishing'
-    type==='main'&&this.publish.pcStats.start()
-    await type==='main'?this.publishNotify():this.publishsubNotify()
+    type === 'main' && this.publish.pcStats.start()
+    await type === 'main' ? this.publishNotify() : this.publishsubNotify()
   }
 
   // 开始播放
@@ -1086,13 +1092,13 @@ class Room extends events {
     this.mixStream.localRemoveTrack('audio', false)
     this.mixStream.localRemoveTrack('audio', true)
     if (
-      this.mixStream.playVideoStream.get(this.myInfo.display)&&
+      this.mixStream.playVideoStream.get(this.myInfo.display) &&
       this.mixStream.playVideoStream.get(this.myInfo.display).getVideoTracks()[0] &&
       this.mixStream.localVideoStream.getVideoTracks()[0] &&
       this.mixStream.playVideoStream.get(this.myInfo.display).getVideoTracks()[0] === this.mixStream.localVideoStream.getVideoTracks()[0]
     ) {
       // play与local一样
-      this.mixStream.playRemoveTrack(this.mixStream.playVideoStream.get(this.myInfo.display).getVideoTracks()[0],this.myInfo.display)
+      this.mixStream.playRemoveTrack(this.mixStream.playVideoStream.get(this.myInfo.display).getVideoTracks()[0], this.myInfo.display)
     }
 
     this.mixStream.localRemoveTrack('video', false)
@@ -1113,7 +1119,7 @@ class Room extends events {
     return this.send({
       action: 'join',
       room: this.myInfo.room,
-      role:this.myInfo.role,
+      role: this.myInfo.role,
       display: this.myInfo.display,
       tokenId: this.myInfo.tokenId,
     })
@@ -1134,23 +1140,23 @@ class Room extends events {
     })
   }
   //清晰度切换
-  async changeResolutionRatio(){
+  async changeResolutionRatio() {
     if (this.publish.pc) {
-      this.publish.pc.getSenders()[1].track&&this.publish.pc.getSenders()[1].track.stop()
+      this.publish.pc.getSenders()[1].track && this.publish.pc.getSenders()[1].track.stop()
     }
     if (this.publish.pc) this.localStateNotify()
     var constraints = this.deviceInfo.getPushConstraints();
-    constraints.video.width&&(constraints.video.width = '160');
-    constraints.video.height&&(constraints.video.height ='90');
+    constraints.video.width && (constraints.video.width = '160');
+    constraints.video.height && (constraints.video.height = '90');
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     this.publish.pc.getSenders()[1].replaceTrack(stream.getVideoTracks()[0])
-    this.mixStream.playAddTrack(stream.getVideoTracks()[0],this.myInfo.display)
+    this.mixStream.playAddTrack(stream.getVideoTracks()[0], this.myInfo.display)
     this.localStateNotify()
-    console.log(constraints,'==模糊====');
+    console.log(constraints, '==模糊====');
   }
-  async changeResolutionRatio1(){
+  async changeResolutionRatio1() {
     if (this.publish.pc) {
-      this.publish.pc.getSenders()[1].track&&this.publish.pc.getSenders()[1].track.stop()
+      this.publish.pc.getSenders()[1].track && this.publish.pc.getSenders()[1].track.stop()
     }
     if (this.publish.pc) this.localStateNotify()
     var constraints = this.deviceInfo.getPushConstraints();
@@ -1158,9 +1164,9 @@ class Room extends events {
     constraints.video.height = '720'
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     this.publish.pc.getSenders()[1].replaceTrack(stream.getVideoTracks()[0])
-    this.mixStream.playAddTrack(stream.getVideoTracks()[0],this.myInfo.display)
+    this.mixStream.playAddTrack(stream.getVideoTracks()[0], this.myInfo.display)
     this.localStateNotify()
-    console.log(constraints,'===超清===');
+    console.log(constraints, '===超清===');
   }
   reloadPublish() {
     console.log(this.roominfo, this.publish.pc, '现在有什么数据')
@@ -1174,7 +1180,7 @@ class Room extends events {
       this.roominfo.self.videomuted = false
       this.publish.isLocalMuted = false
       this.publishsdp(true, true)
-    }else{
+    } else {
       this.stopPublish()
       this.unPublishNotify()
       this.publish.isAllowPushVideo = true
@@ -1250,7 +1256,7 @@ class Room extends events {
     // if (this.publish.pc) {
     //   this.stopPublishStreamNotification(this.roominfo.self.display)
     // }
-    
+
     let that = this
     this.hasAudioInput = this.deviceInfo.audioInputDevice !== null
     this.hasWebcam = this.deviceInfo.videoInputDevice !== null
@@ -1258,104 +1264,104 @@ class Room extends events {
     this.publish.pc.onconnectionstatechange = function (event) {
       switch (that.publish.pc.connectionState) {
         case 'new':
-            // 新建，尚未启动
-            console.log('新建，尚未启动');
-            break;
+          // 新建，尚未启动
+          console.log('新建，尚未启动');
+          break;
         case 'connecting':
-            // 正在尝试建立连接
-            console.log('正在尝试建立连接');
-            break;
+          // 正在尝试建立连接
+          console.log('正在尝试建立连接');
+          break;
         case 'checking':
-            // 检查是否可以建立连接
-            console.log('检查是否可以建立连接');
-            break;
+          // 检查是否可以建立连接
+          console.log('检查是否可以建立连接');
+          break;
         case 'connected':
-            // 已经建立连接
-            console.log('已经建立连接');
-            break;
+          // 已经建立连接
+          console.log('已经建立连接');
+          break;
         case 'completed':
-            // 连接已完成，此时两端都有多于一个的候选对等体
-            console.log('连接已完成，此时两端都有多于一个的候选对等体');
-            break;
+          // 连接已完成，此时两端都有多于一个的候选对等体
+          console.log('连接已完成，此时两端都有多于一个的候选对等体');
+          break;
         case 'failed':
-            // 连接尝试失败
-            console.log('连接尝试失败');
-            setTimeout(() => {
-              that.reloadPublish()
-            }, 500);
-            break;
+          // 连接尝试失败
+          console.log('连接尝试失败');
+          setTimeout(() => {
+            that.reloadPublish()
+          }, 500);
+          break;
         case 'disconnected':
-            // 连接断开，但是可能重新连接
-            Message({
-              showClose: true,
-              message: '连接断开，但是可能重新连接',
-              type: 'warning'
-            });
-            console.log('连接断开，但是可能重新连接');
-            break;
+          // 连接断开，但是可能重新连接
+          Message({
+            showClose: true,
+            message: '连接断开，但是可能重新连接',
+            type: 'warning'
+          });
+          console.log('连接断开，但是可能重新连接');
+          break;
         case 'closed':
-            // 连接关闭
-            console.log('连接关闭');
-            break;
+          // 连接关闭
+          console.log('连接关闭');
+          break;
         default:
-            // 其他状态
-            console.log('其他状态');
-            break;
+          // 其他状态
+          console.log('其他状态');
+          break;
       }
     }
     this.publish.pcStats = this.newPcStats(this.publish.pc, true, this.myInfo)
     this.newMixStream() // 实例化mixstream文件的类
     // 收发器，代表只发送
     // 添加一个单向的音频流
-     this.publish.pc.addTransceiver('audio', { direction: 'sendonly' })
+    this.publish.pc.addTransceiver('audio', { direction: 'sendonly' })
 
-     this.publish.pc.addTransceiver('video', { direction: 'sendonly' })
+    this.publish.pc.addTransceiver('video', { direction: 'sendonly' })
     //分享屏幕的时候多一个音频通道
     // 获取本地流
     var constraints = this.deviceInfo.genConstraints(!this.publish.isLocalMuted, !this.publish.isLocalVideoMuted && this.publish.isAllowPushVideo)
     // 如果是观众角色，限制推流为小头像流
-    console.log(this.myInfo.role,'this.myInfo.role1111111111');
-    
+    console.log(this.myInfo.role, 'this.myInfo.role1111111111');
+
     if (this.myInfo.role == 'user') {
       console.log('这是观众角色，限制推流为小头像流');
-      
+
       constraints.video.width = { ideal: 160, max: 160 };
       constraints.video.height = { ideal: 90, max: 90 };
       constraints.video.frameRate = { ideal: 15, max: 15 };
-    }else{
+    } else {
       console.log('这是主持人角色，推流为大头像流');
       constraints.video.width = { ideal: 1280, max: 1920 };
       constraints.video.height = { ideal: 720, max: 1080 };
       constraints.video.frameRate = { ideal: 30, max: 30 };
     }
     // if (constraints.audio || constraints.video) {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      try {
-        console.log(constraints,'constraints22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222')
-        
-        var stream = await navigator.mediaDevices.getUserMedia(constraints)
-        // var stream = new MediaStream()
-        // console.log(streams.getAudioTracks(),screenStream.getTracks());
-        // stream.addTrack(streams.getAudioTracks()[0])
-        // stream.addTrack(screenStream.getTracks()[0],screenStream)
-        // console.log(stream,'这是拉到的流',stream.getTracks());
-        // console.log(screenStream.getTracks(),streams.getVideoTracks(),'拉流设置的参数');
-        stream.getTracks().forEach((track) => {
-          // 音频流中的音频track,视频track, 加入pc发送
-          if (track.kind === 'video') {
-            console.log(track,'video');
-            this.publish.pc.getSenders()[1].replaceTrack(track)
-            // this.mixStream.localAddTrack(track, false) // 加入本地流
-            this.mixStream.playAddTrack(track,this.myInfo.display) // 加入本地播放，推送，自己可以观看
-          } else {
-            this.publish.pc.getSenders()[0].replaceTrack(track)
-            // this.mixStream.localAddTrack(track, false)
-          }
-          console.log(track,'这是在推流时获取到的流通道');
-        })
-      } catch(err) {
-        console.error('请先去系统设置权限', err)
-      }
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    try {
+      console.log(constraints, 'constraints22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222')
+
+      var stream = await navigator.mediaDevices.getUserMedia(constraints)
+      // var stream = new MediaStream()
+      // console.log(streams.getAudioTracks(),screenStream.getTracks());
+      // stream.addTrack(streams.getAudioTracks()[0])
+      // stream.addTrack(screenStream.getTracks()[0],screenStream)
+      // console.log(stream,'这是拉到的流',stream.getTracks());
+      // console.log(screenStream.getTracks(),streams.getVideoTracks(),'拉流设置的参数');
+      stream.getTracks().forEach((track) => {
+        // 音频流中的音频track,视频track, 加入pc发送
+        if (track.kind === 'video') {
+          console.log(track, 'video');
+          this.publish.pc.getSenders()[1].replaceTrack(track)
+          // this.mixStream.localAddTrack(track, false) // 加入本地流
+          this.mixStream.playAddTrack(track, this.myInfo.display) // 加入本地播放，推送，自己可以观看
+        } else {
+          this.publish.pc.getSenders()[0].replaceTrack(track)
+          // this.mixStream.localAddTrack(track, false)
+        }
+        console.log(track, '这是在推流时获取到的流通道');
+      })
+    } catch (err) {
+      console.error('请先去系统设置权限', err)
+    }
     // }else{
     //   console.log('当前无音视频设备权限，无法推流');
     //   confirm('当前无音视频设备权限，无法推流')
@@ -1368,10 +1374,10 @@ class Room extends events {
     //     offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
     //     offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
     //     offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
-    if (this.myInfo.role=='user') {
-        var vbit = 50
-        var abit = 49
-        offer.sdp = this.setMediaBitrates(offer.sdp, vbit, abit)
+    if (this.myInfo.role == 'user') {
+      var vbit = 50
+      var abit = 49
+      offer.sdp = this.setMediaBitrates(offer.sdp, vbit, abit)
     }
     // const modifedOfferString = this.setMediaBitrates(offer.sdp)
     // offer.sdp = modifedOfferString
@@ -1386,73 +1392,73 @@ class Room extends events {
       sdp: this.publish.offer.sdp, //
     })
   }
-  addParams(sdp,str){
+  addParams(sdp, str) {
     var sdpLines = sdp.split('\r\n');
-    sdpLines.forEach((e,index)=>{
-      if(e.indexOf('level-asymmetry-allowed')!==-1){
-        console.log(e,'这是要改的');
-        sdpLines[index]=e+str
+    sdpLines.forEach((e, index) => {
+      if (e.indexOf('level-asymmetry-allowed') !== -1) {
+        console.log(e, '这是要改的');
+        sdpLines[index] = e + str
       }
     })
     sdp = sdpLines.join('\r\n');
     return sdp;
   }
   enableRRtr(sdp, codec, param) {
-        var sdpLines = sdp.split('\r\n');
-        for (var codecIndex = this.findLine(sdpLines, 'a=rtpmap', codec);codecIndex != null; ){
-          sdpLines.splice(codecIndex + 1, 0, "a=rtcp-fb:" + this.getCodecPayloadTypeFromLine(sdpLines[codecIndex]) + " " + param);
-          codecIndex = this.findLineInRange(sdpLines, codecIndex+1, -1, 'a=rtpmap', codec); 
-        }   
-        sdp = sdpLines.join('\r\n');
-        return sdp;
+    var sdpLines = sdp.split('\r\n');
+    for (var codecIndex = this.findLine(sdpLines, 'a=rtpmap', codec); codecIndex != null;) {
+      sdpLines.splice(codecIndex + 1, 0, "a=rtcp-fb:" + this.getCodecPayloadTypeFromLine(sdpLines[codecIndex]) + " " + param);
+      codecIndex = this.findLineInRange(sdpLines, codecIndex + 1, -1, 'a=rtpmap', codec);
     }
-    findLine(sdpLines, prefix, substr) {
-        return this.findLineInRange(sdpLines, 0, -1, prefix, substr);
-      }
-      findLineInRange(
-          sdpLines,
-          startLine,
-          endLine,
-          prefix,
-          substr,
-          direction
-        ) {
-          if (direction === undefined) {
-            direction = 'asc';
-          }
-        
-          direction = direction || 'asc';
-        
-          if (direction === 'asc') {
-            // Search beginning to end
-            var realEndLine = endLine !== -1 ? endLine : sdpLines.length;
-            for (var i = startLine; i < realEndLine; ++i) {
-              if (sdpLines[i].indexOf(prefix) === 0) {
-                if (!substr ||
-                    sdpLines[i].toLowerCase().indexOf(substr.toLowerCase()) !== -1) {
-                  return i;
-                }
-              }
-            }
-          } else {
-            // Search end to beginning
-            var realStartLine = startLine !== -1 ? startLine : sdpLines.length-1;
-            for (var j = realStartLine; j >= 0; --j) {
-              if (sdpLines[j].indexOf(prefix) === 0) {
-                if (!substr ||
-                    sdpLines[j].toLowerCase().indexOf(substr.toLowerCase()) !== -1) {
-                  return j;
-                }
-              }
-            }
-          }
-          return null;
+    sdp = sdpLines.join('\r\n');
+    return sdp;
+  }
+  findLine(sdpLines, prefix, substr) {
+    return this.findLineInRange(sdpLines, 0, -1, prefix, substr);
+  }
+  findLineInRange(
+    sdpLines,
+    startLine,
+    endLine,
+    prefix,
+    substr,
+    direction
+  ) {
+    if (direction === undefined) {
+      direction = 'asc';
+    }
+
+    direction = direction || 'asc';
+
+    if (direction === 'asc') {
+      // Search beginning to end
+      var realEndLine = endLine !== -1 ? endLine : sdpLines.length;
+      for (var i = startLine; i < realEndLine; ++i) {
+        if (sdpLines[i].indexOf(prefix) === 0) {
+          if (!substr ||
+            sdpLines[i].toLowerCase().indexOf(substr.toLowerCase()) !== -1) {
+            return i;
+          }
         }
-    getCodecPayloadTypeFromLine(sdpLine) {
-        var pattern = new RegExp('a=rtpmap:(\\d+) [a-zA-Z0-9-]+\\/\\d+');
-        var result = sdpLine.match(pattern);
-        return (result && result.length === 2) ? result[1] : null;
       }
+    } else {
+      // Search end to beginning
+      var realStartLine = startLine !== -1 ? startLine : sdpLines.length - 1;
+      for (var j = realStartLine; j >= 0; --j) {
+        if (sdpLines[j].indexOf(prefix) === 0) {
+          if (!substr ||
+            sdpLines[j].toLowerCase().indexOf(substr.toLowerCase()) !== -1) {
+            return j;
+          }
+        }
+      }
+    }
+    return null;
+  }
+  getCodecPayloadTypeFromLine(sdpLine) {
+    var pattern = new RegExp('a=rtpmap:(\\d+) [a-zA-Z0-9-]+\\/\\d+');
+    var result = sdpLine.match(pattern);
+    return (result && result.length === 2) ? result[1] : null;
+  }
   // 通知远端拉流
   publishNotify() {
     return this.send({
@@ -1472,7 +1478,7 @@ class Room extends events {
       room: this.myInfo.room,
       display: this.myInfo.display,
       tokenId: this.myInfo.tokenId,
-      subDisplay:this.myInfo.subDisplay
+      subDisplay: this.myInfo.subDisplay
     })
   }
   // 通知远端取消拉辅流
@@ -1532,10 +1538,10 @@ class Room extends events {
 
   async playsdp(player) {
     var offer = await player.pc.createOffer()
-//        offer.sdp = this.enableRRtr(offer.sdp,"H264", "rrtr")
-//     offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
-//     offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
-//     offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
+    //        offer.sdp = this.enableRRtr(offer.sdp,"H264", "rrtr")
+    //     offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
+    //     offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
+    //     offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
     player.offer = offer
 
     // pc设置本地SDP
@@ -1581,17 +1587,17 @@ class Room extends events {
             player.offer = null
             player.display = p.subDisplay
             player.pc.ontrack = (event) => {
-                if (event.track.kind === 'audio') {
-                  // 只拿声音，视频是本地视频`
-                  console.log('进来添加音频轨道');
-                  that.mixStream.playAddTrack(event.track,p.subDisplay)
-                  player.pcStats.start()
-                } else {
-                  // video
-                   player.stream.addTrack(event.track)
-                  that.mixStream.playAddTrack(event.track,p.subDisplay)
-                }
+              if (event.track.kind === 'audio') {
+                // 只拿声音，视频是本地视频`
+                console.log('进来添加音频轨道');
+                that.mixStream.playAddTrack(event.track, p.subDisplay)
+                player.pcStats.start()
+              } else {
+                // video
+                player.stream.addTrack(event.track)
+                that.mixStream.playAddTrack(event.track, p.subDisplay)
               }
+            }
             this.playsdp(player) // 发送sdp
             this.players.set(player.display, player)
           } else {
@@ -1600,7 +1606,7 @@ class Room extends events {
           }
         }
         if (!this.players.get(p.display)) {
-          console.log('进来重新创建链了吗',p.display);
+          console.log('进来重新创建链了吗', p.display);
           const player = {
             pc: new RTCPeerConnection(null), // PeerConnection
             stream: new MediaStream(),
@@ -1620,10 +1626,10 @@ class Room extends events {
             if (event.track.kind === 'audio') {
               // 只拿声音，视频是本地视频`
               console.log('添加音频轨道');
-              that.mixStream.playAddTrack(event.track,p.display)
+              that.mixStream.playAddTrack(event.track, p.display)
               player.pcStats.start()
-            } else if(event.track.kind === 'video') {
-              that.mixStream.playAddTrack(event.track,p.display)
+            } else if (event.track.kind === 'video') {
+              that.mixStream.playAddTrack(event.track, p.display)
             }
           }
           this.playsdp(player) // 发送sdp
@@ -1637,8 +1643,8 @@ class Room extends events {
       if (value === true) {
         console.log('又进来停止播放流吗');
         const player = this.players.get(key)
-        if (this.players.get(key).stream&&this.players.get(key).stream.getVideoTracks().length) {
-          let track =  this.players.get(key).stream.getVideoTracks()[0]
+        if (this.players.get(key).stream && this.players.get(key).stream.getVideoTracks().length) {
+          let track = this.players.get(key).stream.getVideoTracks()[0]
           track.stop()
           this.players.get(key).stream.removeTrack(track)
         }
@@ -1649,7 +1655,7 @@ class Room extends events {
       }
     })
     setTimeout(() => {
-      if(this.mixStream.playVideoStream.size){
+      if (this.mixStream.playVideoStream.size) {
         this.emit('play-video-stream-updated', this.mixStream.playVideoStream)
       }
     }, 1500);
@@ -1712,14 +1718,14 @@ class Room extends events {
     })
   }
   // 本地流静音, kind=audio/video
-   mutelocal(kind) {
+  mutelocal(kind) {
     if (kind === 'audio') {
       if (this.publish.isLocalMuted) {
         return
       }
       // this.mixStream && this.mixStream.localRemoveTrack(kind, false) // 音频只管删除发送
       if (this.publish.pc) {
-        this.publish.pc.getSenders()[0].track&&this.publish.pc.getSenders()[0].track.stop()
+        this.publish.pc.getSenders()[0].track && this.publish.pc.getSenders()[0].track.stop()
       }
       this.publish.isLocalMuted = true
     } else if (kind === 'video') {
@@ -1728,10 +1734,12 @@ class Room extends events {
       if (this.mixStream && !this.mixStream.localVideoStreamScreen) {
         // 不是屏幕分享的流才删除
         // this.mixStream && this.mixStream.localRemoveTrack(kind, false) // 视频删除发送
-        this.mixStream && this.mixStream.playVideoRemoveTrack() // 视频直接清空，本地不显示视频
+        // this.mixStream && this.mixStream.playVideoRemoveTrack() // 视频直接清空，本地不显示视频
+        // 这里应该传入 display，并且建议直接移除流而非仅移除轨道，以去掉黑屏占位
+        this.mixStream && this.mixStream.removeSubStream(this.myInfo.display)
       }
       if (this.publish.pc) {
-        this.publish.pc.getSenders()[1].track&&this.publish.pc.getSenders()[1].track.stop()
+        this.publish.pc.getSenders()[1].track && this.publish.pc.getSenders()[1].track.stop()
       }
     }
     this.publishRecordSdp()
@@ -1743,7 +1751,7 @@ class Room extends events {
     if (!this.publish.pc) {
       this.publish.isLocalMuted = false
       this.publish.isLocalVideoMuted = true
-      this.publishsdp(true,true)
+      this.publishsdp(true, true)
     }
     const stream = await this.deviceInfo.startCaptureSingle(kind)
     if (kind === 'video') {
@@ -1756,7 +1764,7 @@ class Room extends events {
         }
       }
       this.publish.pc.getSenders()[1].replaceTrack(stream.getVideoTracks()[0])
-      this.mixStream.playAddTrack(stream.getVideoTracks()[0],this.myInfo.display)
+      this.mixStream.playAddTrack(stream.getVideoTracks()[0], this.myInfo.display)
       this.publish.isLocalVideoMuted = false
       this.publishRecordSdp()
     } else {
@@ -1770,7 +1778,7 @@ class Room extends events {
         }
       }
       this.publish.pc.getSenders()[0].replaceTrack(stream.getAudioTracks()[0])
-      this.mixStream.playAudioStream.size>0&&this.emit('play-video-stream-updated', this.mixStream.playAudioStream)
+      this.mixStream.playAudioStream.size > 0 && this.emit('play-video-stream-updated', this.mixStream.playAudioStream)
       this.publish.isLocalMuted = false
     }
     this.localStateNotify()
@@ -1791,8 +1799,8 @@ class Room extends events {
   }
   // 必须要有视频，可以没有音频, 替换掉本地的视频
   // 必须要有视频，可以没有音频, 替换掉本地的视频
- async shareScreenStream(stream) {
-  let that = this
+  async shareScreenStream(stream) {
+    let that = this
     this.republish()
     this.hasAudioInput = this.deviceInfo.audioInputDevice !== null
     this.hasWebcam = this.deviceInfo.videoInputDevice !== null
@@ -1807,30 +1815,30 @@ class Room extends events {
       // 音频流中的音频track,视频track, 加入pc发送
       if (track.kind === 'video') {
         this.mixStream.localAddTrack(track, false) // 加入本地流
-        this.mixStream.playAddTrack(track,this.myInfo.display) // 加入本地播放，推送，自己可以观看
+        this.mixStream.playAddTrack(track, this.myInfo.display) // 加入本地播放，推送，自己可以观看
       } else {
         this.mixStream.localAddTrack(track, false)
       }
     })
     stream.getVideoTracks()[0].onended = async () => {
       that.publish.isSharing = false
-          that.mixStream.localRemoveTrack('video', true) // 本地流删除视频流
-          that.mixStream.playRemoveTrack(stream.getVideoTracks()[0],this.myInfo.display)
-          that.speedLimit = true // false为不限速，true为限速
-          that.publish.subpc&&that.publish.subpc.close()
-          that.publish.subpc = null
-          this.unPublishsubNotify()
-          that.republish()
-          setTimeout(() => {
-            this.publishsdp(true, true)
-          }, 2000);
+      that.mixStream.localRemoveTrack('video', true) // 本地流删除视频流
+      that.mixStream.playRemoveTrack(stream.getVideoTracks()[0], this.myInfo.display)
+      that.speedLimit = true // false为不限速，true为限速
+      that.publish.subpc && that.publish.subpc.close()
+      that.publish.subpc = null
+      this.unPublishsubNotify()
+      that.republish()
+      setTimeout(() => {
+        this.publishsdp(true, true)
+      }, 2000);
     }
     // 创建SDP
     var offer = await this.publish.pc.createOffer()
-//        offer.sdp = this.enableRRtr(offer.sdp,"H264", "rrtr")
-//     offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
-//     offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
-//     offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
+    //        offer.sdp = this.enableRRtr(offer.sdp,"H264", "rrtr")
+    //     offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
+    //     offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
+    //     offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
     this.publish.offer = offer
     await this.publish.pc.setLocalDescription(offer)
     setTimeout(() => {
@@ -1843,7 +1851,7 @@ class Room extends events {
       })
     }, 2000);
   }
-  audioStreamUpdated(aStream){
+  audioStreamUpdated(aStream) {
     if (!this.publish.pc) return
     var track = null
     aStream && aStream.getAudioTracks().length > 0 && (track = aStream.getAudioTracks()[0])
@@ -1856,62 +1864,15 @@ class Room extends events {
       sender = senders[0]
     }
     setTimeout(() => {
-     console.log(track,'辅流音频通道');
+      console.log(track, '辅流音频通道');
       if (sender) {
         sender.setStreams(aStream)
       }
     }, 300);
     if (track !== null) this.emit('device-change', 'audio-input', track.label)
   }
-    //推辅流的方法
-    async publishsubsdp(isPushAudio, isPushVideo, screenStream = null) {
-      const that = this
-      this.publish.subpc = new RTCPeerConnection(null) // 创建对等链接
-      // 收发器，代表只发送
-      isPushAudio && this.publish.subpc.addTransceiver('audio', { direction: 'sendonly' })
-      // 添加单向的视频流
-      isPushVideo && this.publish.subpc.addTransceiver('video', { direction: 'sendonly' })
-      //subDisplay是辅流的display
-      that.myInfo.subDisplay = Number(parseInt(new Date().getTime() * Math.random() * 100))
-        .toString(16)
-        .toString(16)
-        .substr(0, 15)
-      if (screenStream.getVideoTracks().length>0&&this.publish.subpc) {
-        //监听辅流是否关闭
-        screenStream.getVideoTracks()[0].onended = async () => {
-          this.unPublishsubNotify()
-          this.publish.subpc.close()
-          that.publish.subpc = null
-          that.myInfo.subDisplay = ''
-        }
-      }
-      // 将流发送到远端
-      this.subStreamUpdated(screenStream)
-      this.subAudioStreamUpdated(screenStream)
-      let offer = await this.publish.subpc.createOffer()
-//       offer.sdp = this.enableRRtr(offer.sdp,"H264", "rrtr")
-//       offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
-//       offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
-//       offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
-      // offer.sdp = this.addParams(offer.sdp,';x-google-max-bitrate=10000;x-google-min-bitrate=2000;x-google-start-bitrate=5000')
-      //本地储存辅流
-      that.mixStream.localsubTrack(screenStream.getVideoTracks()[0])
-      //suboffer是辅流的offer
-      this.publish.suboffer = offer
-      // pc设置本地SDP更改与连接关联的本地描述。
-      // 此描述指定连接本地端的属性，包括媒体格式。该方法接受一个参数——会话描述——并且它返回一个 Promise，一旦描述被改变，它就会异步地完成。
-      await this.publish.subpc.setLocalDescription(offer)
-      await this.send({
-        action: 'publishsdp',
-        room: this.myInfo.room,
-        display: this.myInfo.display,
-        tokenId: this.myInfo.tokenId,
-        subDisplay:this.myInfo.subDisplay,//推辅流要多加subdisplay
-        sdp: this.publish.suboffer.sdp,
-      })
-  }
-  async publishBoardsdp(isPushAudio, isPushVideo, screenStream = null) {
-    console.log(screenStream.getVideoTracks(),screenStream.getTracks(),'共享白板流');
+  //推辅流的方法
+  async publishsubsdp(isPushAudio, isPushVideo, screenStream = null) {
     const that = this
     this.publish.subpc = new RTCPeerConnection(null) // 创建对等链接
     // 收发器，代表只发送
@@ -1923,7 +1884,7 @@ class Room extends events {
       .toString(16)
       .toString(16)
       .substr(0, 15)
-    if (screenStream.getVideoTracks().length>0&&this.publish.subpc) {
+    if (screenStream.getVideoTracks().length > 0 && this.publish.subpc) {
       //监听辅流是否关闭
       screenStream.getVideoTracks()[0].onended = async () => {
         this.unPublishsubNotify()
@@ -1934,7 +1895,54 @@ class Room extends events {
     }
     // 将流发送到远端
     this.subStreamUpdated(screenStream)
-    var stream = await navigator.mediaDevices.getUserMedia({audio:true})
+    this.subAudioStreamUpdated(screenStream)
+    let offer = await this.publish.subpc.createOffer()
+    //       offer.sdp = this.enableRRtr(offer.sdp,"H264", "rrtr")
+    //       offer.sdp = this.enableRRtr(offer.sdp,"VP8", "rrtr")
+    //       offer.sdp = this.enableRRtr(offer.sdp,"VP9", "rrtr")
+    //       offer.sdp = this.enableRRtr(offer.sdp,"AV1", "rrtr")
+    // offer.sdp = this.addParams(offer.sdp,';x-google-max-bitrate=10000;x-google-min-bitrate=2000;x-google-start-bitrate=5000')
+    //本地储存辅流
+    that.mixStream.localsubTrack(screenStream.getVideoTracks()[0])
+    //suboffer是辅流的offer
+    this.publish.suboffer = offer
+    // pc设置本地SDP更改与连接关联的本地描述。
+    // 此描述指定连接本地端的属性，包括媒体格式。该方法接受一个参数——会话描述——并且它返回一个 Promise，一旦描述被改变，它就会异步地完成。
+    await this.publish.subpc.setLocalDescription(offer)
+    await this.send({
+      action: 'publishsdp',
+      room: this.myInfo.room,
+      display: this.myInfo.display,
+      tokenId: this.myInfo.tokenId,
+      subDisplay: this.myInfo.subDisplay,//推辅流要多加subdisplay
+      sdp: this.publish.suboffer.sdp,
+    })
+  }
+  async publishBoardsdp(isPushAudio, isPushVideo, screenStream = null) {
+    console.log(screenStream.getVideoTracks(), screenStream.getTracks(), '共享白板流');
+    const that = this
+    this.publish.subpc = new RTCPeerConnection(null) // 创建对等链接
+    // 收发器，代表只发送
+    isPushAudio && this.publish.subpc.addTransceiver('audio', { direction: 'sendonly' })
+    // 添加单向的视频流
+    isPushVideo && this.publish.subpc.addTransceiver('video', { direction: 'sendonly' })
+    //subDisplay是辅流的display
+    that.myInfo.subDisplay = Number(parseInt(new Date().getTime() * Math.random() * 100))
+      .toString(16)
+      .toString(16)
+      .substr(0, 15)
+    if (screenStream.getVideoTracks().length > 0 && this.publish.subpc) {
+      //监听辅流是否关闭
+      screenStream.getVideoTracks()[0].onended = async () => {
+        this.unPublishsubNotify()
+        this.publish.subpc.close()
+        that.publish.subpc = null
+        that.myInfo.subDisplay = ''
+      }
+    }
+    // 将流发送到远端
+    this.subStreamUpdated(screenStream)
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     this.subAudioStreamUpdated(stream)
     let offer = await this.publish.subpc.createOffer()
     //本地储存辅流
@@ -1949,21 +1957,21 @@ class Room extends events {
       room: this.myInfo.room,
       display: this.myInfo.display,
       tokenId: this.myInfo.tokenId,
-      subDisplay:this.myInfo.subDisplay,//推辅流要多加subdisplay
+      subDisplay: this.myInfo.subDisplay,//推辅流要多加subdisplay
       sdp: this.publish.suboffer.sdp,
     })
-}
+  }
   // 推辅流
-  async publishAuxiliaryStream(stream){
+  async publishAuxiliaryStream(stream) {
     //推辅流或者推新的辅流则将之前的流轨道都停掉
-    this.auxiliaryStream.getTracks().forEach( track => track.stop() )
-    this.mixStreams.getTracks().forEach( track => track.stop() )
+    this.auxiliaryStream.getTracks().forEach(track => track.stop())
+    this.mixStreams.getTracks().forEach(track => track.stop())
     //将新的共享屏幕流存储起来
     this.auxiliaryStream = stream;
     //如果之前有推辅流就先停止
     if (this.publish.subpc) {
-      this.publish.subpc.getSenders()[0].track&&this.publish.subpc.getSenders()[0].track.stop()
-      this.publish.subpc.getSenders()[1].track&&this.publish.subpc.getSenders()[1].track.stop()
+      this.publish.subpc.getSenders()[0].track && this.publish.subpc.getSenders()[0].track.stop()
+      this.publish.subpc.getSenders()[1].track && this.publish.subpc.getSenders()[1].track.stop()
       this.myInfo.subDisplay = ''
       this.mixStream.localSubRemoveStream() //本地流删除视频辅流
       this.unPublishsubNotify()
@@ -1971,24 +1979,24 @@ class Room extends events {
       this.publish.subpc = null
     }
     //调用混流操作
-    let mstream =await this.mixAudioStream(stream)
+    let mstream = await this.mixAudioStream(stream)
     //将混好的流存储起来
     this.mixStreams = mstream
     //开始进行辅流协商
     this.publishsubsdp(true, true, mstream) // 重新协商将屏幕流带进去
   }
-   // 推共白板
-   async publishBoardStream(stream){
+  // 推共白板
+  async publishBoardStream(stream) {
     console.log('-------------------------------------------------------------');
     //推辅流或者推新的辅流则将之前的流轨道都停掉
-    this.auxiliaryStream.getTracks().forEach( track => track.stop() )
-    this.mixStreams.getTracks().forEach( track => track.stop() )
+    this.auxiliaryStream.getTracks().forEach(track => track.stop())
+    this.mixStreams.getTracks().forEach(track => track.stop())
     //将新的共享屏幕流存储起来
     this.auxiliaryStream = stream;
     //如果之前有推辅流就先停止
     if (this.publish.subpc) {
-      this.publish.subpc.getSenders()[0].track&&this.publish.subpc.getSenders()[0].track.stop()
-      this.publish.subpc.getSenders()[1].track&&this.publish.subpc.getSenders()[1].track.stop()
+      this.publish.subpc.getSenders()[0].track && this.publish.subpc.getSenders()[0].track.stop()
+      this.publish.subpc.getSenders()[1].track && this.publish.subpc.getSenders()[1].track.stop()
       this.myInfo.subDisplay = ''
       this.mixStream.localSubRemoveStream() //本地流删除视频辅流
       this.unPublishsubNotify()
@@ -1996,19 +2004,19 @@ class Room extends events {
       this.publish.subpc = null
     }
     //调用混流操作
-    let mstream =await this.mixAudioStream(stream)
+    let mstream = await this.mixAudioStream(stream)
     //将混好的流存储起来
     this.mixStreams = mstream
     //开始进行辅流协商
     this.publishBoardsdp(true, true, mstream) // 重新协商将屏幕流带进去
   }
   //融音频流
-  async mixAudioStream(astream){
+  async mixAudioStream(astream) {
     console.log(this.roominfo.self);
-    let track = this.publish.pc?this.publish.pc.getSenders()[0].track:null
+    let track = this.publish.pc ? this.publish.pc.getSenders()[0].track : null
     //判断主流是否在推音频流，如果有在推音频流就停止主流pc的音轨然后融流，否者返回原摄像头流
-    console.log(track,'track--------------------------------');
-    if(track){
+    console.log(track, 'track--------------------------------');
+    if (track) {
       // track.stop()//停止主流音轨
       // let mediaStream = await navigator.mediaDevices.getUserMedia({audio: true});//获取设备音频流
       // const micSourceNode = this.mixStream.audioContext.createMediaStreamSource(mediaStream);// 生成一个设备 mediaStream 音频源
@@ -2021,19 +2029,19 @@ class Room extends events {
       // astream.getVideoTracks().length&&mstream.addTrack(astream.getVideoTracks()[0])
       // mstream.addTrack(destination.stream.getAudioTracks()[0])
       return astream;//将融合完毕的音轨放到新流里面返回
-    }else{
+    } else {
       return astream;//主流之中没有音频流，则直接返回原始的共享音频流
     }
   }
   //当本地声音发生改变时，对音轨进行操作
-  async changesubAudioStream(hasAudio){
+  async changesubAudioStream(hasAudio) {
     if (hasAudio) {
       console.log('开启音频');
       // console.log(this.auxiliaryStream.getTracks());
       // 当本地开启声音的时候，就拿刚才存储的声音
-      let mstream =await this.mixAudioStream(this.auxiliaryStream)
+      let mstream = await this.mixAudioStream(this.auxiliaryStream)
       this.subAudioStreamUpdated(mstream)
-    }else{
+    } else {
       console.log('关闭音频');
       this.subAudioStreamUpdated(this.auxiliaryStream)
     }
@@ -2041,7 +2049,7 @@ class Room extends events {
   // 将辅流推到远端的方法
   subStreamUpdated(vStream) {
     if (!this.publish.subpc) return
-    console.log(vStream.getVideoTracks(),'共享品目视频通道');
+    console.log(vStream.getVideoTracks(), '共享品目视频通道');
     let track = null
     vStream.getVideoTracks().length > 0 && (track = vStream.getVideoTracks()[0])
     var senders = this.publish.subpc.getSenders()
@@ -2058,7 +2066,7 @@ class Room extends events {
     }
     if (track !== null) this.emit('device-change', 'video-input', track.label)
   }
-  subAudioStreamUpdated(aStream){
+  subAudioStreamUpdated(aStream) {
     if (!this.publish.subpc) return
     var track = null
     // console.log(aStream);
