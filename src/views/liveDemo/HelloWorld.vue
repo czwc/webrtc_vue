@@ -2729,7 +2729,7 @@ export default {
             }
           }
         });
-        
+        ·
         // 延迟统计，等待所有异步操作完成
         setTimeout(() => {
           if (updatedCount > 0 || removedKeys.length > 0 || invisibleCount > 0) {

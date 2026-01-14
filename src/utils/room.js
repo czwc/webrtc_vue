@@ -1723,9 +1723,14 @@ class Room extends events {
       if (this.publish.isLocalMuted) {
         return
       }
-      // this.mixStream && this.mixStream.localRemoveTrack(kind, false) // 音频只管删除发送
+      // 使用 enabled 属性禁用音频轨道，而不是停止轨道
+      // 这样可以保持轨道存在，避免远端检测到轨道移除事件
       if (this.publish.pc) {
-        this.publish.pc.getSenders()[0].track && this.publish.pc.getSenders()[0].track.stop()
+        const audioSender = this.publish.pc.getSenders()[0]
+        if (audioSender && audioSender.track) {
+          audioSender.track.enabled = false
+          console.log('本地音频已静音（禁用轨道）')
+        }
       }
       this.publish.isLocalMuted = true
     } else if (kind === 'video') {
@@ -1738,6 +1743,7 @@ class Room extends events {
         // 这里应该传入 display，并且建议直接移除流而非仅移除轨道，以去掉黑屏占位
         this.mixStream && this.mixStream.removeSubStream(this.myInfo.display)
       }
+      // 视频保持原有逻辑：停止轨道
       if (this.publish.pc) {
         this.publish.pc.getSenders()[1].track && this.publish.pc.getSenders()[1].track.stop()
       }
@@ -1752,9 +1758,11 @@ class Room extends events {
       this.publish.isLocalMuted = false
       this.publish.isLocalVideoMuted = true
       this.publishsdp(true, true)
+      return
     }
-    const stream = await this.deviceInfo.startCaptureSingle(kind)
+    
     if (kind === 'video') {
+      // 视频保持原有逻辑：总是重新获取设备流
       if (!this.publish.isAllowPushVideo) {
         return
       }
@@ -1763,12 +1771,13 @@ class Room extends events {
           return
         }
       }
+      const stream = await this.deviceInfo.startCaptureSingle(kind)
       this.publish.pc.getSenders()[1].replaceTrack(stream.getVideoTracks()[0])
       this.mixStream.playAddTrack(stream.getVideoTracks()[0], this.myInfo.display)
       this.publish.isLocalVideoMuted = false
       this.publishRecordSdp()
     } else {
-      // kind === 'audio'
+      // kind === 'audio' - 优化后的逻辑
       if (!this.publish.pc) {
         this.publish.isLocalVideoMuted = true
       }
@@ -1777,7 +1786,19 @@ class Room extends events {
           return
         }
       }
-      this.publish.pc.getSenders()[0].replaceTrack(stream.getAudioTracks()[0])
+      
+      // 检查是否已有音频轨道且轨道有效
+      const audioSender = this.publish.pc.getSenders()[0]
+      if (audioSender && audioSender.track && audioSender.track.readyState === 'live' && !audioSender.track.enabled) {
+        // 如果轨道存在、有效且被禁用，直接启用（快速路径）
+        audioSender.track.enabled = true
+        console.log('本地音频已解除静音（启用轨道）')
+      } else {
+        // 如果轨道不存在、已停止或已启用，重新获取（兼容设备切换等场景）
+        const stream = await this.deviceInfo.startCaptureSingle(kind)
+        this.publish.pc.getSenders()[0].replaceTrack(stream.getAudioTracks()[0])
+        console.log('本地音频已解除静音（重新获取轨道）')
+      }
       this.mixStream.playAudioStream.size > 0 && this.emit('play-video-stream-updated', this.mixStream.playAudioStream)
       this.publish.isLocalMuted = false
     }
@@ -1963,9 +1984,31 @@ class Room extends events {
   }
   // 推辅流
   async publishAuxiliaryStream(stream) {
-    //推辅流或者推新的辅流则将之前的流轨道都停掉
-    this.auxiliaryStream.getTracks().forEach(track => track.stop())
-    this.mixStreams.getTracks().forEach(track => track.stop())
+    //推辅流或者推新的辅流则将之前的流轨道都停掉（包括清理静音轨道资源）
+    this.auxiliaryStream.getTracks().forEach(track => {
+      // 如果是自动添加的静音轨道，清理AudioContext资源
+      if (track._isAutoAddedSilent && track._silentAudioContext) {
+        try {
+          track._silentAudioContext.close();
+          console.log('[辅流] 静音音轨AudioContext已清理');
+        } catch (error) {
+          console.error('[辅流] 清理AudioContext失败:', error);
+        }
+      }
+      track.stop();
+    })
+    this.mixStreams.getTracks().forEach(track => {
+      // 如果是自动添加的静音轨道，清理AudioContext资源
+      if (track._isAutoAddedSilent && track._silentAudioContext) {
+        try {
+          track._silentAudioContext.close();
+          console.log('[辅流] 静音音轨AudioContext已清理');
+        } catch (error) {
+          console.error('[辅流] 清理AudioContext失败:', error);
+        }
+      }
+      track.stop();
+    })
     //将新的共享屏幕流存储起来
     this.auxiliaryStream = stream;
     //如果之前有推辅流就先停止
@@ -1978,6 +2021,23 @@ class Room extends events {
       this.publish.subpc.close()
       this.publish.subpc = null
     }
+    
+    // 检查辅流是否有音轨，如果没有则添加静音轨道
+    // 这样做是为了确保WebRTC连接的稳定性和兼容性
+    if (stream && stream.getAudioTracks().length === 0) {
+      console.log('[辅流] 检测到无音轨，尝试添加静音音轨');
+      const silentTrack = this.createSilentAudioTrack();
+      
+      if (silentTrack) {
+        stream.addTrack(silentTrack);
+        // 标记这是一个自动添加的静音轨道，用于后续清理
+        silentTrack._isAutoAddedSilent = true;
+        console.log('[辅流] 静音音轨已添加');
+      } else {
+        console.warn('[辅流] 静音音轨创建失败，继续使用无音轨的流');
+      }
+    }
+    
     //调用混流操作
     let mstream = await this.mixAudioStream(stream)
     //将混好的流存储起来
@@ -2033,6 +2093,46 @@ class Room extends events {
       return astream;//主流之中没有音频流，则直接返回原始的共享音频流
     }
   }
+  /**
+   * 创建一个静音音频轨道
+   * 使用AudioContext创建一个空的音频流，并将其设置为静音状态
+   * 用于在辅流（屏幕共享）没有音轨时提供一个静音轨道，确保WebRTC连接的稳定性
+   * @returns {MediaStreamTrack|null} 静音的音频轨道，创建失败时返回null
+   */
+  createSilentAudioTrack() {
+    try {
+      // 创建音频上下文（兼容Safari的webkit前缀）
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // 创建振荡器（但不会产生实际声音，因为track会被禁用）
+      const oscillator = ctx.createOscillator();
+      
+      // 创建媒体流目标
+      const destination = ctx.createMediaStreamDestination();
+      
+      // 连接振荡器到目标
+      oscillator.connect(destination);
+      
+      // 启动振荡器
+      oscillator.start();
+      
+      // 获取音频轨道
+      const track = destination.stream.getAudioTracks()[0];
+      
+      // 禁用轨道（静音）
+      track.enabled = false;
+      
+      // 存储AudioContext引用以便后续清理
+      track._silentAudioContext = ctx;
+      
+      console.log('[辅流] 创建静音音轨成功');
+      return track;
+    } catch (error) {
+      console.error('[辅流] 创建静音音轨失败:', error);
+      return null;
+    }
+  }
+
   //当本地声音发生改变时，对音轨进行操作
   async changesubAudioStream(hasAudio) {
     if (hasAudio) {
